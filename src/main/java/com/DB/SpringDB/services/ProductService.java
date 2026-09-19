@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import com.DB.SpringDB.dto.CreateProductDto;
 import com.DB.SpringDB.dto.ProductDto;
 import com.DB.SpringDB.entities.Product;
+import com.DB.SpringDB.exception.DuplicateProductNameException;
 import com.DB.SpringDB.exception.ProductNotFoundException;
 import com.DB.SpringDB.repositories.ProductRepository;
 
@@ -27,6 +28,10 @@ public class ProductService {
 
     @Transactional
     public ProductDto create(CreateProductDto createProductDto){
+        String name = createProductDto.getName().trim();
+        if(productRepository.existsByNameIgnoreCase(name)) {
+            throw new DuplicateProductNameException("A product with this name already exists");
+        }
         Product product = new Product();
         if(createProductDto.getActive() != null) {
             product.setActive(createProductDto.getActive());
@@ -57,32 +62,43 @@ public class ProductService {
         log.info("Getting product from DB for id {}",id);
         Product product = productRepository.findById(id).orElseThrow(() -> 
             new ProductNotFoundException("Product not found with id : " + id)
-        );
-
-        return map(product);
-    }
+            );
+            
+            return map(product);
+        }
 
     @Transactional 
     @CacheEvict(value = "products" ,key = "#id")
     public ProductDto update(Long id,CreateProductDto updateProductDto) {
         Product prodcut = productRepository.findById(id).orElseThrow(
             () -> new ProductNotFoundException("Product not found with id : " + id)
-        );
-        if(updateProductDto.getName() != null){
-            prodcut.setName(updateProductDto.getName());
+            );
+        String name = updateProductDto.getName().trim();
+        if(productRepository.existsByNameIgnoreCaseAndIdNot(name,id)) {
+            new ProductNotFoundException("Product not found with id : " + id);
         }
+        prodcut.setName(name);
+        prodcut.setPrice(updateProductDto.getPrice());
+        if(updateProductDto.getActive() != null) {
 
-        if(updateProductDto.getPrice() != null){
-            prodcut.setPrice(updateProductDto.getPrice());
         }
-
-        if(updateProductDto.getActive() != null){
-            prodcut.setActive(updateProductDto.getActive());
-        }    
-
         log.info("Getting product from DB for id {}",id);
 
-        return map(prodcut);
+        return map(productRepository.save(prodcut));
+    }   
+
+    public List<ProductDto> getActiveCatalog() {
+        return productRepository.findAllByActiveTrueOrderByNameAsc()
+                                .stream()
+                                .map(this::map)
+                                .toList();
+    }
+
+    public void deactivate(Long id) {
+        Product prodcut = productRepository.findById(id).orElseThrow(() -> 
+            new ProductNotFoundException("Product not found with id : " + id)
+        );
+        prodcut.setActive(false);
     }
 
     public void delete(Long id) {

@@ -28,10 +28,20 @@ public class GlobalExceptionHandler {
         ));
     } 
 
-    @ExceptionHandler
+    @ExceptionHandler(ProductNotFoundException.class)
     public ResponseEntity<ErrorDto> handleProductNotFoundException(ProductNotFoundException ex){
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorDto("PRODUCT_NOT_FOUND", ex.getMessage()));
     }   
+
+    @ExceptionHandler(DuplicateProductNameException.class)
+    public ResponseEntity<ErrorDto> handleDuplicateProductNameException(DuplicateProductNameException ex){
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorDto("DUPLICATE_PRODUCT_NAME", ex.getMessage()));
+    }   
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorDto> handleInternalServerException(Exception ex) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorDto("INTERNAL_SERVER_ERROR", "Internal server error"));    
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorDto> handleMethodArgumentNotValidException(MethodArgumentNotValidException ex){

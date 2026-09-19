@@ -65,4 +65,8 @@ public class Product {
     public void setActive(Boolean active){
         this.active = active;
     }
+
+    public boolean isActive() {
+        return this.active == true;
+    }
 }
