@@ -1,4 +1,4 @@
-package com.DB.SpringDB.repository;
+package com.DB.SpringDB.service;
 
 import java.math.BigDecimal;
 import java.util.List;

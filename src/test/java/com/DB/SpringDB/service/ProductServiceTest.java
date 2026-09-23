@@ -1,4 +1,4 @@
-package com.DB.SpringDB;
+package com.DB.SpringDB.service;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
