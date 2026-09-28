@@ -11,7 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import com.DB.SpringDB.AbstractIntegretionTest;
+import com.DB.SpringDB.AbstractIntegrationTest;
 import com.DB.SpringDB.dto.CreateProductDto;
 import com.DB.SpringDB.dto.ProductDto;
 import com.DB.SpringDB.entities.Product;
@@ -23,7 +23,7 @@ import com.DB.SpringDB.services.ProductService;
 import jakarta.transaction.Transactional;
 
 @Transactional 
-public class ProductIntegrationTest extends AbstractIntegretionTest {
+public class ProductIntegrationTest extends AbstractIntegrationTest {
     @Autowired 
     private ProductRepository productRepository;
 

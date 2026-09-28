@@ -10,7 +10,7 @@ import org.testcontainers.mysql.MySQLContainer;
 @Testcontainers
 @SpringBootTest 
 @ActiveProfiles("test")
-public abstract class AbstractIntegretionTest {
+public abstract class AbstractIntegrationTest {
     @Container 
     @ServiceConnection
     static MySQLContainer mysql = 
