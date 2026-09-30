@@ -61,4 +61,9 @@ public class GlobalExceptionHandler {
         
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorDto("INVALID_INPUT",errMsg.toString()));
     }
+
+    @ExceptionHandler(DuplicateUserException.class)
+    public ResponseEntity<ErrorDto> handleDuplicateUserException(DuplicateUserException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorDto("DUPLICATE_USER_EMAIL", ex.getMessage()));
+    }
 }

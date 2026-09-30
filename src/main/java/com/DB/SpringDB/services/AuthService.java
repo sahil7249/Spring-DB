@@ -15,6 +15,7 @@ import com.DB.SpringDB.dto.LoginUserResponseDto;
 import com.DB.SpringDB.dto.RegisterUserResponseDto;
 import com.DB.SpringDB.entities.Role;
 import com.DB.SpringDB.entities.User;
+import com.DB.SpringDB.exception.DuplicateUserException;
 import com.DB.SpringDB.repositories.UserRepository;
 import com.DB.SpringDB.security.JwtService;
 
@@ -41,6 +42,11 @@ public class AuthService {
 
     @Transactional 
     public RegisterUserResponseDto register(CreateUserDto createUserDto) {
+        if(userRepository.existsByEmailIgnoreCase(createUserDto.getEmail())) {
+            String msg = String.format("User exists with email %s , try using another email: ", createUserDto.getEmail());
+            throw new DuplicateUserException(msg);
+        }
+        
         User user = new User();
         user.setName(createUserDto.getName());
         user.setEmail(createUserDto.getEmail());
@@ -48,7 +54,7 @@ public class AuthService {
         user.setRole(Role.ADMIN);
         
         User savedUser = userRepository.save(user);
-        return new RegisterUserResponseDto(savedUser.getId(),savedUser.getName());
+        return new RegisterUserResponseDto(savedUser.getId(),savedUser.getEmail());
     }   
 
     public LoginUserResponseDto loginUser(LoginUserDto loginUserDto) {
@@ -57,6 +63,6 @@ public class AuthService {
         );
 
         String jwToken = jwtService.generateJWToken((UserDetails) Objects.requireNonNull(authentication.getPrincipal()));   
-        return new LoginUserResponseDto(jwToken);
+        return new LoginUserResponseDto(jwToken, loginUserDto.getEmail());
     }
 }

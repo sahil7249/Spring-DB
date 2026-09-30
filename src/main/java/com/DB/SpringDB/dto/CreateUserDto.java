@@ -16,6 +16,7 @@ public class CreateUserDto {
     @NotBlank (message = "Password must not be blank")
     private String password;
 
+    public CreateUserDto(){}
 
     public CreateUserDto(String name,String email,String password) {
         this.name = name;

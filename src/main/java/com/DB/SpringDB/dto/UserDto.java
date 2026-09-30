@@ -6,6 +6,7 @@ public class UserDto {
     private String email;
 
 
+    public UserDto(){}
 
     public UserDto(Long id,String name,String email){
         this.id = id;
