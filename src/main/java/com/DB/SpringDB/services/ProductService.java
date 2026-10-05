@@ -75,7 +75,7 @@ public class ProductService {
             );
         String name = updateProductDto.getName().trim();
         if(productRepository.existsByNameIgnoreCaseAndIdNot(name,id)) {
-            new ProductNotFoundException("Product not found with id : " + id);
+            throw new ProductNotFoundException("Product not found with id : " + id);
         }
         prodcut.setName(name);
         prodcut.setPrice(updateProductDto.getPrice());

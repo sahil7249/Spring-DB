@@ -2,75 +2,169 @@ package com.DB.SpringDB.controller;
 
 
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClient;
+
+import org.springframework.http.HttpHeaders;
 
 import com.DB.SpringDB.AbstractIntegrationTest;
 import com.DB.SpringDB.dto.CreateUserDto;
 import com.DB.SpringDB.dto.LoginUserDto;
+import com.DB.SpringDB.dto.LoginUserResponseDto;
+import com.DB.SpringDB.dto.RegisterUserResponseDto;
 
-import jakarta.transaction.Transactional;
-import tools.jackson.databind.ObjectMapper;
 
-@Transactional
-@AutoConfigureMockMvc(addFilters = false) 
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT
+)
 public class AuthControllerIntegrationTest extends AbstractIntegrationTest {
-    @Autowired
-    private MockMvc mockMvc;
-    
-    @Autowired
-    private ObjectMapper objectMapper;
+
+    @LocalServerPort
+    private int port;
+
+    @Autowired 
+    private PasswordEncoder passwordEncoder;
+
+    @Test 
+    @DisplayName("Should register a new user")
+    void shouldRegisterANewUser() {
+        RestClient restClient = restClientBuilder("/api/v1");
+        
+        CreateUserDto dto = new CreateUserDto();
+        dto.setName("John Doe");
+        dto.setEmail("john.doe@example.com");
+        dto.setPassword(passwordEncoder.encode("password"));
+
+
+        RegisterUserResponseDto response = 
+            restClient.post()
+                .uri("/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(dto)
+                .retrieve()
+                .body(RegisterUserResponseDto.class);
+
+        assertNotNull(response);
+        assertEquals(dto.getEmail(), response.getEmail());
+    }
+
+    private RestClient restClientBuilder(String uri) {
+        RestClient restClient = RestClient.builder()
+            .baseUrl(baseUrl(uri))
+            .build();
+        return restClient;
+    }
+
+    private String baseUrl(String uri) {
+        return "http://localhost:" + port + uri; 
+    }
+
 
     @Test
-    @DisplayName("Should register the user(API)")
-    void shouldRegisterUserApi() throws Exception {
-        CreateUserDto user = new CreateUserDto();
-        user.setName("user");
-        user.setEmail("user@gmail.com");
-        user.setPassword("user123");
+    @DisplayName("Should reject the duplicate email")
+    void shouldRejectDuplicateEmail() {
+        RestClient restClient = restClientBuilder("/api/v1");
 
-        mockMvc.perform(
-            post("/api/v1/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(user))
+        CreateUserDto dto = new CreateUserDto();
+        dto.setName("John doe");
+        dto.setEmail("john@gmail.com");
+        dto.setPassword(passwordEncoder.encode("password"));
 
-        )
-        .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.id").exists())
-        .andExpect(jsonPath("$.email").value("user@gmail.com"));
+
+        // First time register.
+        restClient.post()
+            .uri("/auth/register")
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(dto)
+            .retrieve()
+            .body(RegisterUserResponseDto.class);
+        
+        // Second time should throw the error and reject the duplicate email.
+        assertThrows(
+            HttpClientErrorException.BadRequest.class, 
+            () -> restClient.post()
+                            .uri("/auth/register")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .body(dto)
+                            .retrieve()
+                            .body(String.class)
+        );
     }
 
     @Test
-    @DisplayName("Should login user successfully")
-    void shouldLoginUserSuccessfully() throws Exception {
-        CreateUserDto register = new CreateUserDto();
-        register.setName("login-user");
-        register.setEmail("user@email.com");
-        register.setPassword("user123");
-        mockMvc.perform(
-            post("/api/v1/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(register))
-        )
-        .andExpect(status().isCreated());
-        LoginUserDto login = new LoginUserDto();
-        login.setEmail("user@email.com");
-        login.setPassword("user123");
+    @DisplayName("Should login successfully")
+    void shouldLoginSuccessfully() {
+        CreateUserDto registerUser = new CreateUserDto("John Doe","john1@gmail.com","john@123");
+        RestClient restClient = restClientBuilder("/api/v1");
+        
+        RegisterUserResponseDto registerResponse = restClient.post()
+            .uri("/auth/register")
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(registerUser)
+            .retrieve()
+            .body(RegisterUserResponseDto.class);
 
-        mockMvc.perform(
-            post("/api/v1/auth/login")
+        assertNotNull(registerResponse);
+        
+        LoginUserDto loginDto = new LoginUserDto("john1@gmail.com","john@123");
+        
+        LoginUserResponseDto response = restClient.post()
+            .uri("/auth/login")
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(loginDto)
+            .retrieve()
+            .body(LoginUserResponseDto.class);
+            
+            assertNotNull(response);
+            assertNotNull(response.getJwt());
+        }
+        
+        
+        @Test
+        @DisplayName("Should access the protected route")
+        void shouldAccessProtectedRoute() {
+            CreateUserDto registerUser = new CreateUserDto("John Doe","john2@gmail.com","john@123");
+            RestClient restClient = restClientBuilder("/api/v1");
+            
+            RegisterUserResponseDto registerResponse = restClient.post()
+                .uri("/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(login))
-        )
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.jwt").exists())
-        .andExpect(jsonPath("$.email").value("user@email.com"));
+                .body(registerUser)
+                .retrieve()
+                .body(RegisterUserResponseDto.class);
+            assertNotNull(registerResponse);
+
+            LoginUserDto loginDto = new LoginUserDto("john2@gmail.com","john@123");
+            
+            LoginUserResponseDto loginResponse = restClient.post()
+                .uri("/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(loginDto)
+                .retrieve()
+                .body(LoginUserResponseDto.class);
+
+            String token = loginResponse.getJwt();
+            assertNotNull(token);
+
+            String response = 
+                restClient.get()
+                    .uri("/products")
+                    .header(
+                        HttpHeaders.AUTHORIZATION, "Bearer "+token
+                    )
+                    .retrieve()
+                    .body(String.class);
+            assertNotNull(response);
     }
 }
